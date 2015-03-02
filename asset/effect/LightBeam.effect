@@ -1,0 +1,81 @@
+{
+
+    "name" : "lightbeam",
+
+    "attributeBindings" : {
+        "aPosition" : "geometry[${geometryId}].position",
+        "aNormal" : "geometry[${geometryId}].normal"
+    },
+
+    "uniformBindings" : {
+        "uModelToWorldMatrix" : "transform.modelToWorldMatrix",
+        "uWorldToScreenMatrix" : { "property" : "camera.worldToScreenMatrix", "source" : "renderer" },
+        "uCameraPosition" : { "property" : "camera.position", "source" : "renderer" }
+    },
+
+    "macroBindings" : {
+        "MODEL_TO_WORLD" : "transform.modelToWorldMatrix"
+    },
+
+    "stateBindings" : { },
+
+    "techniques" : [{
+        "passes" : [{
+
+            "blendMode" : ["one", "one"],
+            "priority" : "last",
+            "depthMask" : false,
+
+            "vertexShader" : "
+
+                #ifdef GL_ES
+                    precision mediump float;
+                #endif
+
+                attribute vec3 aPosition;
+                attribute vec3 aNormal;
+
+                uniform mat4 uModelToWorldMatrix;
+                uniform mat4 uWorldToScreenMatrix;
+
+                varying vec3 vVertexNormal;
+                varying vec3 vVertexWorldPosition;
+
+                void main()
+                {
+                    vVertexNormal = normalize(aNormal);
+
+                    vec4 pos = vec4(aPosition, 1.0);
+
+                    #ifdef MODEL_TO_WORLD
+                        pos = uModelToWorldMatrix * pos;
+                    #endif
+                    vVertexWorldPosition = pos.xyz;
+
+                    gl_Position = uWorldToScreenMatrix * pos;
+                }
+
+            ",
+            "fragmentShader" : "
+
+                #ifdef GL_ES
+                    precision mediump float;
+                #endif
+
+                //uniform sampler2D uTexture;
+                uniform vec3 uCameraPosition;
+
+                varying vec3 vVertexNormal;
+                varying vec3 vVertexWorldPosition;
+
+                void main()
+                {
+                    vec3 vertexToEye = uCameraPosition - vVertexWorldPosition;
+                    float d = dot(normalize(vertexToEye), normalize(vVertexNormal));
+
+                    gl_FragColor = vec4(vec3(min(pow(1. - d, 4.), 0.7)), 1.0);
+                }
+            "
+        }]
+    }]
+}
